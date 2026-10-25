@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBS Live Stock Screener</title>
+    <!-- Tailwind CSS for modern mobile & desktop layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-3 md:p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-emerald-400">RBS Live Screener</h1>
+                <p class="text-slate-400 text-sm">Buyer vs. Seller Strength & Momentum Dashboard</p>
+            </div>
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <input type="text" id="searchInput" placeholder="Search symbol..." 
+                    class="bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 w-full md:w-64">
+                <button onclick="fetchScreenerData()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap">
+                    Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Status Bar -->
+        <div class="flex justify-between items-center bg-slate-900 border border-slate-800/80 rounded-xl p-4 mb-6 text-sm">
+            <span id="statusText" class="text-slate-400">Connecting to Render backend...</span>
+            <span id="lastUpdated" class="text-xs text-slate-500"></span>
+        </div>
+
+        <!-- Screener Table / Cards Container -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/50">
+                            <th class="p-4 font-semibold">Symbol</th>
+                            <th class="p-4 font-semibold">Price (₹)</th>
+                            <th class="p-4 font-semibold">Change</th>
+                            <th class="p-4 font-semibold">Volume</th>
+                            <th class="p-4 font-semibold">Combined Score</th>
+                            <th class="p-4 font-semibold">RBS Ratio</th>
+                            <th class="p-4 font-semibold">Signal Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="screenerTableBody" class="divide-y divide-slate-800/60 text-sm">
+                        <tr>
+                            <td colspan="7" class="p-8 text-center text-slate-500">Loading live data from Yahoo Finance...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Your Render Backend API URL
+        const API_URL = "https://rbs-backend-g271.onrender.com/api/screener";
+
+        let allData = [];
+
+        async function fetchScreenerData() {
+            const statusText = document.getElementById("statusText");
+            const lastUpdated = document.getElementById("lastUpdated");
+            statusText.textContent = "Fetching live market ticks...";
+
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                allData = data.symbols || [];
+                
+                renderTable(allData);
+                statusText.textContent = `Live Stream Active (${allData.length} symbols loaded)`;
+                lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                statusText.textContent = "Error connecting to backend API. Render service might be spinning up...";
+            }
+        }
+
+        function renderTable(symbols) {
+            const tbody = document.getElementById("screenerTableBody");
+            tbody.innerHTML = "";
+
+            if (symbols.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-500">No symbols found.</td></tr>`;
+                return;
+            }
+
+            symbols.forEach(item => {
+                const isPositive = item.change_pct >= 0;
+                const changeClass = isPositive ? "text-emerald-400" : "text-rose-400";
+                
+                let badgeClass = "bg-slate-800 text-slate-300";
+                if (item.status === "Breakout Above") badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                if (item.status === "Breakdown Below") badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-800/40 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-bold text-white">${item.symbol}</td>
+                    <td class="p-4 font-mono">₹${item.live_price.toLocaleString('en-IN')}</td>
+                    <td class="p-4 font-mono ${changeClass}">${isPositive ? '+' : ''}${item.change_pct}%</td>
+                    <td class="p-4 font-mono text-slate-300">${item.volume.toLocaleString('en-IN')}</td>
+                    <td class="p-4 font-mono ${item.combined_score >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.combined_score.toLocaleString('en-IN')}</td>
+                    <td class="p-4 font-mono">${item.rbs_ratio}</td>
+                    <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-medium ${badgeClass}">${item.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Search filter logic
+        document.getElementById("searchInput").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allData.filter(item => item.symbol.toLowerCase().includes(query));
+            renderTable(filtered);
+        });
+
+        // Initial fetch and auto-refresh every 30 seconds
+        fetchScreenerData();
+        setInterval(fetchScreenerData, 30000);
+    </script>
+</body>
+</html>
