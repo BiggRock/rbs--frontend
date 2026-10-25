@@ -6,13 +6,8 @@
     <title>RBS & Technical Analytics Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .th-sortable {
-            cursor: pointer;
-            user-select: none;
-        }
-        .th-sortable:hover {
-            color: #34d399;
-        }
+        .th-sortable { cursor: pointer; user-select: none; }
+        .th-sortable:hover { color: #34d399; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-3 md:p-6 font-sans">
@@ -65,12 +60,10 @@
         <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead id="tableHead">
-                        <!-- Headings populated dynamically with sort handlers -->
-                    </thead>
+                    <thead id="tableHead"></thead>
                     <tbody id="screenerTableBody" class="divide-y divide-slate-800/60 text-sm">
                         <tr>
-                            <td colspan="7" class="p-8 text-center text-slate-500 font-medium">Loading live ticks from 222 F&O scrips...</td>
+                            <td colspan="7" class="p-8 text-center text-slate-500 font-medium">Loading live ticks from F&O scrips...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -110,7 +103,7 @@
         async function refreshCurrentTab() {
             const statusText = document.getElementById("statusText");
             const lastUpdated = document.getElementById("lastUpdated");
-            statusText.textContent = `Fetching 222 F&O market ticks for ${activeTab.toUpperCase()}...`;
+            statusText.textContent = `Fetching market ticks for ${activeTab.toUpperCase()}...`;
 
             const endpoint = activeTab === "rbs" ? "/api/screener" : "/api/indicators";
 
@@ -123,7 +116,7 @@
                 renderHeader();
                 renderTable(displayedData);
 
-                statusText.textContent = `Live Stream Active (${rawData.length} F&O symbols active)`;
+                statusText.textContent = `Live Stream Active (${rawData.length} symbols loaded)`;
                 lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -140,8 +133,8 @@
             }
 
             displayedData.sort((a, b) => {
-                let valA = a[key];
-                let valB = b[key];
+                let valA = a[key] ?? 0;
+                let valB = b[key] ?? 0;
 
                 if (typeof valA === 'string') {
                     return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -198,7 +191,7 @@
             }
 
             symbols.forEach(item => {
-                const isPositive = item.change_pct >= 0;
+                const isPositive = (item.change_pct ?? 0) >= 0;
                 const changeClass = isPositive ? "text-emerald-400 font-medium" : "text-rose-400 font-medium";
                 const tr = document.createElement("tr");
                 tr.className = "hover:bg-slate-800/50 transition border-b border-slate-800/40";
@@ -209,27 +202,31 @@
                     if (item.status === "Breakdown Below") badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/30";
 
                     tr.innerHTML = `
-                        <td class="p-4 font-bold text-white tracking-wide">${item.symbol}</td>
-                        <td class="p-4 font-mono">₹${item.live_price.toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono ${changeClass}">${isPositive ? '+' : ''}${item.change_pct}%</td>
-                        <td class="p-4 font-mono text-slate-300">${item.volume.toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono ${item.combined_score >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.combined_score.toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono font-semibold">${item.rbs_ratio}</td>
-                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.status}</span></td>
+                        <td class="p-4 font-bold text-white tracking-wide">${item.symbol ?? ''}</td>
+                        <td class="p-4 font-mono">₹${(item.live_price ?? 0).toLocaleString('en-IN')}</td>
+                        <td class="p-4 font-mono ${changeClass}">${isPositive ? '+' : ''}${item.change_pct ?? 0}%</td>
+                        <td class="p-4 font-mono text-slate-300">${(item.volume ?? 0).toLocaleString('en-IN')}</td>
+                        <td class="p-4 font-mono ${(item.combined_score ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${(item.combined_score ?? 0).toLocaleString('en-IN')}</td>
+                        <td class="p-4 font-mono font-semibold">${item.rbs_ratio ?? 0}</td>
+                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.status ?? 'Neutral'}</span></td>
                     `;
                 } else {
                     let badgeClass = "bg-slate-800 text-slate-300";
                     if (item.signal === "Bullish Momentum") badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
                     if (item.signal === "Bearish Momentum") badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/30";
 
+                    let rsiVal = item.rsi ?? 50;
+                    let mfiVal = item.mfi ?? 50;
+                    let wrVal = item.williams_r ?? -50;
+
                     tr.innerHTML = `
-                        <td class="p-4 font-bold text-white tracking-wide">${item.symbol}</td>
-                        <td class="p-4 font-mono">₹${item.live_price.toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono ${changeClass}">${isPositive ? '+' : ''}${item.change_pct}%</td>
-                        <td class="p-4 font-mono ${item.rsi > 60 ? 'text-emerald-400 font-bold' : (item.rsi < 40 ? 'text-rose-400 font-bold' : 'text-slate-300')}">${item.rsi}</td>
-                        <td class="p-4 font-mono ${item.mfi > 60 ? 'text-emerald-400' : (item.mfi < 40 ? 'text-rose-400' : 'text-slate-300')}">${item.mfi}</td>
-                        <td class="p-4 font-mono ${item.williams_r > -20 ? 'text-emerald-400' : (item.williams_r < -80 ? 'text-amber-400 font-bold' : 'text-slate-300')}">${item.williams_r}</td>
-                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.signal}</span></td>
+                        <td class="p-4 font-bold text-white tracking-wide">${item.symbol ?? ''}</td>
+                        <td class="p-4 font-mono">₹${(item.live_price ?? 0).toLocaleString('en-IN')}</td>
+                        <td class="p-4 font-mono ${changeClass}">${isPositive ? '+' : ''}${item.change_pct ?? 0}%</td>
+                        <td class="p-4 font-mono ${rsiVal > 60 ? 'text-emerald-400 font-bold' : (rsiVal < 40 ? 'text-rose-400 font-bold' : 'text-slate-300')}">${rsiVal}</td>
+                        <td class="p-4 font-mono ${mfiVal > 60 ? 'text-emerald-400' : (mfiVal < 40 ? 'text-rose-400' : 'text-slate-300')}">${mfiVal}</td>
+                        <td class="p-4 font-mono ${wrVal > -20 ? 'text-emerald-400' : (wrVal < -80 ? 'text-amber-400 font-bold' : 'text-slate-300')}">${wrVal}</td>
+                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.signal ?? 'Neutral'}</span></td>
                     `;
                 }
 
@@ -239,9 +236,9 @@
 
         function filterTech(type) {
             if (activeTab !== "tech") return;
-            if (type === 'rsi_60') displayedData = rawData.filter(i => i.rsi > 60);
-            else if (type === 'rsi_40') displayedData = rawData.filter(i => i.rsi < 40);
-            else if (type === 'williams_oversold') displayedData = rawData.filter(i => i.williams_r < -80);
+            if (type === 'rsi_60') displayedData = rawData.filter(i => (i.rsi ?? 50) > 60);
+            else if (type === 'rsi_40') displayedData = rawData.filter(i => (i.rsi ?? 50) < 40);
+            else if (type === 'williams_oversold') displayedData = rawData.filter(i => (i.williams_r ?? -50) < -80);
             else displayedData = [...rawData];
 
             renderHeader();
@@ -250,7 +247,7 @@
 
         document.getElementById("searchInput").addEventListener("input", (e) => {
             const query = e.target.value.toLowerCase();
-            displayedData = rawData.filter(item => item.symbol.toLowerCase().includes(query));
+            displayedData = rawData.filter(item => (item.symbol ?? '').toLowerCase().includes(query));
             renderHeader();
             renderTable(displayedData);
         });
@@ -258,4 +255,4 @@
         switchTab("rbs");
     </script>
 </body>
-            </html>
+</html>
