@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RBS & Technical Analytics Hub</title>
+    <title>Deep RBS Screener & Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .th-sortable { cursor: pointer; user-select: none; }
@@ -11,59 +11,57 @@
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-3 md:p-6 font-sans">
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-[98%] mx-auto">
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
             <div>
                 <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">
-                    RBS Analytics Hub
+                    Deep RBS Analytics Screener
                 </h1>
-                <p class="text-slate-400 text-xs md:text-sm">Real-Time NSE F&O Screener & Technical Oscillators</p>
+                <p class="text-slate-400 text-xs md:text-sm">Complete Buyer vs Seller Strength Matrix (Google Sheet Methodology)</p>
             </div>
-            <div class="flex items-center gap-3 w-full md:w-auto">
+            <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
                 <input type="text" id="searchInput" placeholder="Search symbol..." 
-                    class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 w-full md:w-64 transition shadow-inner text-slate-100 placeholder-slate-500">
-                <button onclick="refreshCurrentTab()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-5 py-2 rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-900/30 whitespace-nowrap">
-                    Refresh
+                    class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 w-full md:w-64 text-slate-100 placeholder-slate-500">
+                <button onclick="toggleColumnModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-sm font-semibold transition border border-slate-700">
+                    ⚙️ Select Columns
+                </button>
+                <button onclick="refreshData()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-5 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap">
+                    Refresh Ticks
                 </button>
             </div>
         </header>
 
-        <!-- Dynamic Navigation Tabs -->
-        <div class="flex border-b border-slate-800 mb-4 gap-2 overflow-x-auto">
-            <button id="tabRbsBtn" onclick="switchTab('rbs')" 
-                class="py-2.5 px-4 font-semibold text-sm border-b-2 border-emerald-500 text-emerald-400 transition focus:outline-none whitespace-nowrap">
-                Original RBS Screener
-            </button>
-            <button id="tabTechBtn" onclick="switchTab('tech')" 
-                class="py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition focus:outline-none whitespace-nowrap">
-                Technical Matrix (RSI/MFI/W%R)
-            </button>
-        </div>
-
-        <!-- Technical Filters Bar -->
-        <div id="techFilterBar" class="hidden flex-wrap items-center gap-2 mb-4 bg-slate-900/90 p-3 rounded-xl border border-slate-800/80 text-xs shadow-md">
-            <span class="text-slate-400 font-semibold mr-1">Quick Filters:</span>
-            <button onclick="filterTech('all')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700">All Scrips</button>
-            <button onclick="filterTech('rsi_60')" class="bg-emerald-950/80 text-emerald-300 hover:bg-emerald-900 px-3 py-1.5 rounded-lg border border-emerald-800/80">RSI > 60 (Bullish)</button>
-            <button onclick="filterTech('rsi_40')" class="bg-rose-950/80 text-rose-300 hover:bg-rose-900 px-3 py-1.5 rounded-lg border border-rose-800/80">RSI < 40 (Bearish)</button>
-            <button onclick="filterTech('williams_oversold')" class="bg-amber-950/80 text-amber-300 hover:bg-amber-900 px-3 py-1.5 rounded-lg border border-amber-800/80">Williams %R Oversold (<-80)</button>
+        <!-- Column Selection Modal -->
+        <div id="columnModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-emerald-400">Choose Visible Columns</h2>
+                    <button onclick="toggleColumnModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
+                </div>
+                <div id="columnCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm"></div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button onclick="selectAllColumns(true)" class="text-xs text-emerald-400 hover:underline">Select All</button>
+                    <button onclick="selectAllColumns(false)" class="text-xs text-rose-400 hover:underline">Clear All</button>
+                    <button onclick="toggleColumnModal()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-sm font-semibold">Done</button>
+                </div>
+            </div>
         </div>
 
         <!-- Status Bar -->
         <div class="flex justify-between items-center bg-slate-900/60 border border-slate-800/70 rounded-xl px-4 py-2.5 mb-4 text-xs">
-            <span id="statusText" class="text-slate-400 font-medium">Connecting to service...</span>
+            <span id="statusText" class="text-slate-400 font-medium">Connecting to backend service...</span>
             <span id="lastUpdated" class="text-slate-500 font-mono"></span>
         </div>
 
         <!-- Interactive Data Table Container -->
-        <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead id="tableHead"></thead>
-                    <tbody id="screenerTableBody" class="divide-y divide-slate-800/60 text-sm">
+                    <tbody id="screenerTableBody" class="divide-y divide-slate-800/60 text-xs md:text-sm">
                         <tr>
-                            <td colspan="7" class="p-8 text-center text-slate-500 font-medium">Loading live ticks from F&O scrips...</td>
+                            <td colspan="100%" class="p-8 text-center text-slate-500 font-medium">Loading live ticks from 222 F&O scrips...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -73,42 +71,76 @@
 
     <script>
         const BASE_URL = "https://rbs-backend-g271.onrender.com";
-        let activeTab = "rbs";
         let rawData = [];
         let displayedData = [];
-        let sortColumn = "";
+        let sortColumn = "rbs_ratio";
         let sortAsc = false;
 
-        function switchTab(tab) {
-            activeTab = tab;
-            sortColumn = "";
-            sortAsc = false;
-            const rbsBtn = document.getElementById("tabRbsBtn");
-            const techBtn = document.getElementById("tabTechBtn");
-            const techFilterBar = document.getElementById("techFilterBar");
+        const COLUMNS = [
+            { key: "symbol", label: "Symbol", default: true },
+            { key: "live_price", label: "Live Price (₹)", default: true },
+            { key: "status", label: "Breakout / Breakdown", default: true },
+            { key: "rbs_ratio", label: "RBS Ratio", default: true },
+            { key: "combined_score", label: "Combined Score", default: true },
+            { key: "combined_rank", label: "Combined Rank", default: true },
+            { key: "buyer_strength", label: "Buyer Strength", default: true },
+            { key: "seller_strength", label: "Seller Strength", default: true },
+            { key: "bs", label: "BS Ratio", default: true },
+            { key: "ss", label: "SS Ratio", default: true },
+            { key: "c_vol", label: "Volume", default: true },
+            { key: "vol_rank", label: "Volume Rank", default: false },
+            { key: "buyer_seller_ratio", label: "Buyer Seller Ratio", default: false },
+            { key: "prev_r_factor", label: "Prev R Factor", default: false },
+            { key: "change_r_factor", label: "Change in R Factor", default: false },
+            { key: "c_open", label: "Current Open", default: false },
+            { key: "c_high", label: "Current High", default: false },
+            { key: "c_low", label: "Current Low", default: false },
+            { key: "c_close", label: "Current Close", default: false },
+            { key: "p_open", label: "Prev Open", default: false },
+            { key: "p_high", label: "Prev High", default: false },
+            { key: "p_low", label: "Prev Low", default: false },
+            { key: "p_close", label: "Prev Close", default: false }
+        ];
 
-            if (tab === "rbs") {
-                rbsBtn.className = "py-2.5 px-4 font-semibold text-sm border-b-2 border-emerald-500 text-emerald-400 transition focus:outline-none whitespace-nowrap";
-                techBtn.className = "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition focus:outline-none whitespace-nowrap";
-                techFilterBar.classList.add("hidden");
-            } else {
-                techBtn.className = "py-2.5 px-4 font-semibold text-sm border-b-2 border-emerald-500 text-emerald-400 transition focus:outline-none whitespace-nowrap";
-                rbsBtn.className = "py-2.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition focus:outline-none whitespace-nowrap";
-                techFilterBar.classList.remove("hidden");
-            }
+        let visibleKeys = COLUMNS.filter(c => c.default).map(c => c.key);
 
-            refreshCurrentTab();
+        function toggleColumnModal() {
+            const modal = document.getElementById("columnModal");
+            modal.classList.toggle("hidden");
+            if (!modal.classList.contains("hidden")) renderColumnCheckboxes();
         }
 
-        async function refreshCurrentTab() {
+        function renderColumnCheckboxes() {
+            const container = document.getElementById("columnCheckboxes");
+            container.innerHTML = COLUMNS.map(col => `
+                <label class="flex items-center gap-2 text-slate-300 cursor-pointer">
+                    <input type="checkbox" ${visibleKeys.includes(col.key) ? 'checked' : ''} onchange="toggleKey('${col.key}')" class="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500">
+                    <span>${col.label}</span>
+                </label>
+            `).join('');
+        }
+
+        function toggleKey(key) {
+            if (visibleKeys.includes(key)) visibleKeys = visibleKeys.filter(k => k !== key);
+            else visibleKeys.push(key);
+            renderHeader();
+            renderTable(displayedData);
+        }
+
+        function selectAllColumns(select) {
+            visibleKeys = select ? COLUMNS.map(c => c.key) : ["symbol", "live_price"];
+            renderColumnCheckboxes();
+            renderHeader();
+            renderTable(displayedData);
+        }
+
+        async function refreshData() {
             const statusText = document.getElementById("statusText");
             const lastUpdated = document.getElementById("lastUpdated");
-            statusText.textContent = `Fetching market ticks for ${activeTab.toUpperCase()}...`;
-
-            const endpoint = activeTab === "rbs" ? "/api/screener" : "/api/indicators";
+            statusText.textContent = "Downloading 222 F&O ticks & calculating deep RBS metrics...";
 
             try {
-                const response = await fetch(BASE_URL + endpoint);
+                const response = await fetch(BASE_URL + "/api/screener");
                 const data = await response.json();
                 rawData = data.symbols || [];
                 displayedData = [...rawData];
@@ -116,31 +148,23 @@
                 renderHeader();
                 renderTable(displayedData);
 
-                statusText.textContent = `Live Stream Active (${rawData.length} symbols loaded)`;
+                statusText.textContent = `Deep RBS Stream Active (${rawData.length} F&O symbols loaded)`;
                 lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
             } catch (error) {
-                console.error("Error fetching data:", error);
-                statusText.textContent = "Error connecting to backend API.";
+                console.error(error);
+                statusText.textContent = "Error loading RBS stream.";
             }
         }
 
         function handleSort(key) {
-            if (sortColumn === key) {
-                sortAsc = !sortAsc;
-            } else {
-                sortColumn = key;
-                sortAsc = true;
-            }
+            if (sortColumn === key) sortAsc = !sortAsc;
+            else { sortColumn = key; sortAsc = true; }
 
             displayedData.sort((a, b) => {
                 let valA = a[key] ?? 0;
                 let valB = b[key] ?? 0;
-
-                if (typeof valA === 'string') {
-                    return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                } else {
-                    return sortAsc ? valA - valB : valB - valA;
-                }
+                if (typeof valA === 'string') return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return sortAsc ? valA - valB : valB - valA;
             });
 
             renderHeader();
@@ -154,31 +178,15 @@
 
         function renderHeader() {
             const thead = document.getElementById("tableHead");
-            if (activeTab === "rbs") {
-                thead.innerHTML = `
-                    <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/70">
-                        <th onclick="handleSort('symbol')" class="p-4 th-sortable font-semibold">Symbol ${getSortIndicator('symbol')}</th>
-                        <th onclick="handleSort('live_price')" class="p-4 th-sortable font-semibold">Price (₹) ${getSortIndicator('live_price')}</th>
-                        <th onclick="handleSort('change_pct')" class="p-4 th-sortable font-semibold">Change % ${getSortIndicator('change_pct')}</th>
-                        <th onclick="handleSort('volume')" class="p-4 th-sortable font-semibold">Volume ${getSortIndicator('volume')}</th>
-                        <th onclick="handleSort('combined_score')" class="p-4 th-sortable font-semibold">Combined Score ${getSortIndicator('combined_score')}</th>
-                        <th onclick="handleSort('rbs_ratio')" class="p-4 th-sortable font-semibold">RBS Ratio ${getSortIndicator('rbs_ratio')}</th>
-                        <th onclick="handleSort('status')" class="p-4 th-sortable font-semibold">Signal Status ${getSortIndicator('status')}</th>
-                    </tr>
-                `;
-            } else {
-                thead.innerHTML = `
-                    <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/70">
-                        <th onclick="handleSort('symbol')" class="p-4 th-sortable font-semibold">Symbol ${getSortIndicator('symbol')}</th>
-                        <th onclick="handleSort('live_price')" class="p-4 th-sortable font-semibold">Price (₹) ${getSortIndicator('live_price')}</th>
-                        <th onclick="handleSort('change_pct')" class="p-4 th-sortable font-semibold">Change % ${getSortIndicator('change_pct')}</th>
-                        <th onclick="handleSort('rsi')" class="p-4 th-sortable font-semibold">RSI (14) ${getSortIndicator('rsi')}</th>
-                        <th onclick="handleSort('mfi')" class="p-4 th-sortable font-semibold">MFI (14) ${getSortIndicator('mfi')}</th>
-                        <th onclick="handleSort('williams_r')" class="p-4 th-sortable font-semibold">Williams %R ${getSortIndicator('williams_r')}</th>
-                        <th onclick="handleSort('signal')" class="p-4 th-sortable font-semibold">Signal Status ${getSortIndicator('signal')}</th>
-                    </tr>
-                `;
-            }
+            const colsToRender = COLUMNS.filter(c => visibleKeys.includes(c.key));
+
+            thead.innerHTML = `
+                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/70">
+                    ${colsToRender.map(c => `
+                        <th onclick="handleSort('${c.key}')" class="p-3 th-sortable font-semibold whitespace-nowrap">${c.label} ${getSortIndicator(c.key)}</th>
+                    `).join('')}
+                </tr>
+            `;
         }
 
         function renderTable(symbols) {
@@ -186,73 +194,54 @@
             tbody.innerHTML = "";
 
             if (symbols.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-500">No symbols matching query.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="100%" class="p-8 text-center text-slate-500">No matching symbols found.</td></tr>`;
                 return;
             }
 
+            const colsToRender = COLUMNS.filter(c => visibleKeys.includes(c.key));
+
             symbols.forEach(item => {
-                const isPositive = (item.change_pct ?? 0) >= 0;
-                const changeClass = isPositive ? "text-emerald-400 font-medium" : "text-rose-400 font-medium";
                 const tr = document.createElement("tr");
                 tr.className = "hover:bg-slate-800/50 transition border-b border-slate-800/40";
 
-                if (activeTab === "rbs") {
-                    let badgeClass = "bg-slate-800 text-slate-300";
-                    if (item.status === "Breakout Above") badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-                    if (item.status === "Breakdown Below") badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/30";
+                tr.innerHTML = colsToRender.map(c => {
+                    const key = c.key;
+                    let val = item[key];
 
-                    tr.innerHTML = `
-                        <td class="p-4 font-bold text-white tracking-wide">${item.symbol ?? ''}</td>
-                        <td class="p-4 font-mono">₹${(item.live_price ?? 0).toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono ${changeClass}">${isPositive ? '+' : ''}${item.change_pct ?? 0}%</td>
-                        <td class="p-4 font-mono text-slate-300">${(item.volume ?? 0).toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono ${(item.combined_score ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${(item.combined_score ?? 0).toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono font-semibold">${item.rbs_ratio ?? 0}</td>
-                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.status ?? 'Neutral'}</span></td>
-                    `;
-                } else {
-                    let badgeClass = "bg-slate-800 text-slate-300";
-                    if (item.signal === "Bullish Momentum") badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-                    if (item.signal === "Bearish Momentum") badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/30";
-
-                    let rsiVal = item.rsi ?? 50;
-                    let mfiVal = item.mfi ?? 50;
-                    let wrVal = item.williams_r ?? -50;
-
-                    tr.innerHTML = `
-                        <td class="p-4 font-bold text-white tracking-wide">${item.symbol ?? ''}</td>
-                        <td class="p-4 font-mono">₹${(item.live_price ?? 0).toLocaleString('en-IN')}</td>
-                        <td class="p-4 font-mono ${changeClass}">${isPositive ? '+' : ''}${item.change_pct ?? 0}%</td>
-                        <td class="p-4 font-mono ${rsiVal > 60 ? 'text-emerald-400 font-bold' : (rsiVal < 40 ? 'text-rose-400 font-bold' : 'text-slate-300')}">${rsiVal}</td>
-                        <td class="p-4 font-mono ${mfiVal > 60 ? 'text-emerald-400' : (mfiVal < 40 ? 'text-rose-400' : 'text-slate-300')}">${mfiVal}</td>
-                        <td class="p-4 font-mono ${wrVal > -20 ? 'text-emerald-400' : (wrVal < -80 ? 'text-amber-400 font-bold' : 'text-slate-300')}">${wrVal}</td>
-                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${item.signal ?? 'Neutral'}</span></td>
-                    `;
-                }
+                    if (key === "symbol") return `<td class="p-3 font-bold text-white tracking-wide">${val}</td>`;
+                    if (key === "live_price") return `<td class="p-3 font-mono">₹${val.toLocaleString('en-IN')}</td>`;
+                    if (key === "status") {
+                        let badgeClass = "bg-slate-800 text-slate-300";
+                        if (val === "Breakout Above") badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+                        if (val === "Breakdown Below") badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/30";
+                        return `<td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${val}</span></td>`;
+                    }
+                    if (key === "combined_score") {
+                        const scoreClass = val >= 0 ? "text-emerald-400" : "text-rose-400";
+                        return `<td class="p-3 font-mono ${scoreClass}">${val.toLocaleString('en-IN')}</td>`;
+                    }
+                    if (key === "rbs_ratio") {
+                        const rbsClass = val >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold";
+                        return `<td class="p-3 font-mono ${rbsClass}">${val}</td>`;
+                    }
+                    if (typeof val === 'number') {
+                        return `<td class="p-3 font-mono text-slate-300">${val.toLocaleString('en-IN')}</td>`;
+                    }
+                    return `<td class="p-3 text-slate-300">${val ?? ''}</td>`;
+                }).join('');
 
                 tbody.appendChild(tr);
             });
         }
 
-        function filterTech(type) {
-            if (activeTab !== "tech") return;
-            if (type === 'rsi_60') displayedData = rawData.filter(i => (i.rsi ?? 50) > 60);
-            else if (type === 'rsi_40') displayedData = rawData.filter(i => (i.rsi ?? 50) < 40);
-            else if (type === 'williams_oversold') displayedData = rawData.filter(i => (i.williams_r ?? -50) < -80);
-            else displayedData = [...rawData];
-
-            renderHeader();
-            renderTable(displayedData);
-        }
-
         document.getElementById("searchInput").addEventListener("input", (e) => {
             const query = e.target.value.toLowerCase();
-            displayedData = rawData.filter(item => (item.symbol ?? '').toLowerCase().includes(query));
+            displayedData = rawData.filter(item => item.symbol.toLowerCase().includes(query));
             renderHeader();
             renderTable(displayedData);
         });
 
-        switchTab("rbs");
+        refreshData();
     </script>
 </body>
-</html>
+                                                                                                                                                           </html>
